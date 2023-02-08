@@ -92,7 +92,14 @@ reg3 <- lm(log_w~sex+age+maxEducLevel+formal+hoursWorkUsual+oficio, data = db)
 stargazer(reg3, type = "text", digits = 5)
 
 # Paso 1: Residuos de 'sex' en 'controles'
-fwl_aux <- fwl_aux %>% mutate(sex_resid_c=lm(sex~age+maxEducLevel+formal+hoursWorkUsual+oficio, data = db))$residuals
+sex_resid_c = lm(sex~age+maxEducLevel+formal+hoursWorkUsual+oficio, db)$residuals
+
+# Paso 2: Residuos de 'log_w' en 'controles' 
+wage_resid_c = lm(log_w~age+maxEducLevel+formal+hoursWorkUsual+oficio, db)$residuals
+
+# Paso 3: Regresion de residuos
+reg_fwl <- lm(wage_resid_c~sex_resid_c, db)
+stargazer(reg3, reg_fwl, type = "text", digits = 5)
 
 
 # PREDICTING EARNINGS===========================================================
