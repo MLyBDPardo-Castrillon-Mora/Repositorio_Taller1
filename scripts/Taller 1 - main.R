@@ -9,6 +9,7 @@ library(boot)
 library(datawizard)
 library(AICcmodavg)
 library(olsrr)
+library(stargazer)
 p_load(rvest, tidyverse)
 
 
@@ -52,19 +53,20 @@ temp <- temp[temp$ocu==1,]
 db <- db[db$ocu==1,]
 
 # Eliminar observaciones sin salario
-temp <- temp[temp$ingtot>0,]
-db <- db[db$ingtot>0,]
+temp <- temp[temp$y_ingLab_m>0,]
+db <- db[db$y_ingLab_m>0,]
+
+# Generar log de los ingresos
+temp$log_w = log(temp$y_ingLab_m) 
+db$log_w = log(db$y_ingLab_m)
 
 
 # AGE-WAGE PROFILE =============================================================
 
-# Generar log de los ingresos
-temp$log_w = log(temp$ingtot) 
-db$log_w = log(db$ingtot)
-
 # Regresion
 lm(log_w~age+I(age^2), data = temp)
 reg1 <- lm(log_w~age+I(age^2), data = db)
+stargazer(reg1, type = "text", digits = 5)
 
 # Bootstrap
 
@@ -77,6 +79,17 @@ age_max.fn <- function(datos, index){
 }
 
 boot(db, age_max.fn, R = 1000)
+
+# GENDER GAP====================================================================
+
+# Regresion incondicional
+reg2 <- lm(log_w~sex, data = db)
+stargazer(reg2, type = "text", digits = 5)
+
+# FWL
+reg3 <- lm(log_w~sex+age+maxEducLevel+formal+hoursWorkUsual+oficio, data = db)
+stargazer(reg3, type = "text", digits = 5)
+
 
 # PREDICTING EARNINGS===========================================================
 
@@ -141,3 +154,5 @@ for (i in 1:16277) {
 }
 CV5_aux <- CV5_aux^2
 CV_5 <- 1/16277*sum(CV5_aux)
+
+
