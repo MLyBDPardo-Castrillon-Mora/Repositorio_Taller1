@@ -86,9 +86,13 @@ boot(db, age_max.fn, R = 1000)
 reg2 <- lm(log_w~sex, data = db)
 stargazer(reg2, type = "text", digits = 5)
 
-# FWL
+# FWL___________________________________________________________________________
+# Paso 0: Regresion original
 reg3 <- lm(log_w~sex+age+maxEducLevel+formal+hoursWorkUsual+oficio, data = db)
 stargazer(reg3, type = "text", digits = 5)
+
+# Paso 1: Residuos de 'sex' en 'controles'
+fwl_aux <- fwl_aux %>% mutate(sex_resid_c=lm(sex~age+maxEducLevel+formal+hoursWorkUsual+oficio, data = db))$residuals
 
 
 # PREDICTING EARNINGS===========================================================
