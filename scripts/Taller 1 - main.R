@@ -44,6 +44,9 @@ for (i in 2:10){
 # Seed
 set.seed(10101)
 
+#Conservamos las variables relevantes
+db %>% select(age,ocu,y_ingLab_m,sex,maxEducLevel,formal,hoursWorkUsual,oficio)
+
 # Eliminar observaciones de menores de edad
 temp <- temp[temp$age>18,]
 db <- db[db$age>=18,]
@@ -60,11 +63,10 @@ db <- db[db$y_ingLab_m>0,]
 temp$log_w = log(temp$y_ingLab_m) 
 db$log_w = log(db$y_ingLab_m)
 
-
 # AGE-WAGE PROFILE =============================================================
 
 # Regresion
-lm(log_w~age+I(age^2), data = temp)
+lm(log_w~age+I(age^2), data = db)
 reg1 <- lm(log_w~age+I(age^2), data = db)
 stargazer(reg1, type = "text", digits = 5)
 
@@ -159,4 +161,18 @@ for (i in 1:16277) {
 CV5_aux <- CV5_aux^2
 CV_5 <- 1/16277*sum(CV5_aux)
 
+# FILES TO VIEWS FOLDER===========================================================
+
+#Estadisticas descriptivas
+stargazer(db[c("age","sex","formal","hoursWorkUsual","y_ingLab_m")], digits=1,
+                      covariate.labels = c("Edad","Sexo","Educación","1 si es formal; 0 si no", "Horas de trabajo","Ingreso Laboral Mensual"),
+                      summary.stat = c("n","mean","sd","min","p25","median","p75","max"),
+                      type = "latex", title = "Estadisticas Descriptivas",flip = TRUE, out = "./views/est_desc.tex")
+
+#Primer Regresión
+stargazer(reg1, type = "latex", digits = 3, title = "Perfil Edad-Salario",
+          covariate.labels = c("Edad", "Edad Cuadrado", "Constante"),
+          dep.var.labels = ("Logaritmo del Salario"),
+          dep.var.caption = "Variable respuesta",
+          keep.stat = (c("n","rsq","f")), out="./views/reg1.tex")
 
