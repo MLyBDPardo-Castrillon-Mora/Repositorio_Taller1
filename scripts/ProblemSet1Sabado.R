@@ -78,13 +78,19 @@ age_max.fn <- function(datos, index){
 
 # Bootstrap para edad que maximiza ingresos
 b_age_wage <-boot(db, age_max.fn, R = 1000)
+print(b_age_wage)
 
 # Prediccion
 forecast_w <- predict(reg1, data = db$log_w)
 
 #Grafica age-earnings 
 
-ggplot(data=db, mapping=aes(x=age, y=forecast_w))+geom_point(col='#6E8B3D')+xlab("Edad")+ylab("Logaritmo Salario")+ggtitle("Perfil Estimado Edad vs Ingreso")
+ggplot(data=db, mapping=aes(x=age, y=forecast_w))+geom_point(col='#6E8B3D')+xlab("Edad")+ylab("Logaritmo Salario")+ggtitle("Perfil Estimado Edad vs Salario")+theme_bw()
+
+#Bootstrap Intervalos de cofianza 
+intervaloMax <- 43.14188+(0.4482827*1.96)
+intervaloMin <- 43.14188-(0.4482827*1.96)
+print(intervaloMin &","& intervaloMax)
 
 
 # GENDER GAP====================================================================
@@ -113,6 +119,7 @@ stargazer(reg3, reg_fwl, type = "text", digits = 5)
 # Datos auxiliares
 resid <- cbind.data.frame(sex_resid_c, wage_resid_c)
 
+
 # Funcion de coeficiente
 fwl_coef.fn <- function(datos, index){
   X <- datos$sex_resid_c[index]
@@ -123,6 +130,18 @@ fwl_coef.fn <- function(datos, index){
 
 # Bootstrap para GAP condicionado
 boot(resid, fwl_coef.fn, R = 1000)
+
+# Prediccion
+forecast_wr <- predict(reg_fwl, data = wage_resid_c)
+
+#Grafica age-earnings 
+
+ggplot(data=db, mapping=aes(x=age, y=forecast_wr))+geom_point(col='lightskyblue2')+xlab("Edad")+ylab("Logaritmo Salario")+ggtitle("Perfil Estimado Edad vs Salario")+theme_bw()
+
+length(forecast_wr)
+length(residuals)
+length(db)
+
 
 # PREDICTING EARNINGS===========================================================
 
