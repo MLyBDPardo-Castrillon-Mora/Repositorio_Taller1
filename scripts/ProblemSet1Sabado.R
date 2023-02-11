@@ -10,6 +10,7 @@ library(datawizard)
 library(AICcmodavg)
 library(olsrr)
 library(stargazer)
+library(ggplot2)
 p_load(rvest, tidyverse)
 
 
@@ -75,9 +76,15 @@ age_max.fn <- function(datos, index){
   -reg_aux$coefficients[2]/(2*reg_aux$coefficients[3])
 }
 
-
 # Bootstrap para edad que maximiza ingresos
 b_age_wage <-boot(db, age_max.fn, R = 1000)
+
+# Prediccion
+forecast_w <- predict(reg1, data = db$log_w)
+
+#Grafica age-earnings 
+
+ggplot(data=db, mapping=aes(x=age, y=forecast_w))+geom_point(col='#6E8B3D')+xlab("Edad")+ylab("Logaritmo Salario")+ggtitle("Perfil Estimado Edad vs Ingreso")
 
 
 # GENDER GAP====================================================================
