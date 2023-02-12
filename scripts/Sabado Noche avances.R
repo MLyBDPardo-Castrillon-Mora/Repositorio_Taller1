@@ -143,34 +143,36 @@ print(paste ("Min:", intervaloMin,", Max:", intervaloMax))
 
 
 # GENDER GAP====================================================================
+#Hacemos un summary para revisar los controles que se integraran a la regresion
+summary(db[,c('sex','age','maxEducLevel','formal','hoursWorkUsual','oficio')])
 
+#Creamos una nueva base de datos sin missing values con 9891 observaciones
+dbgender <- db[!is.na(db$maxEducLevel),]
 # Regresión incondicional
 
-reg2 <- lm(log_w~sex, data = db)
+reg2 <- lm(log_w~sex, data = dbgender)
 stargazer(reg2, type = "text", digits = 5)
 
 # FWL___________________________________________________________________________
 # Paso 0: Regresion original
-summary(db)
-reg3 <- lm(log_w~sex+age+maxEducLevel+formal+hoursWorkUsual+oficio, data = db)
+
+reg3 <- lm(log_w~sex+age+maxEducLevel+formal+hoursWorkUsual+oficio, data = dbgender)
 stargazer(reg3, type = "text", digits = 5)
 
 # Paso 1: Residuos de 'sex' en 'controles'
-sex_resid_c = lm(sex~age+maxEducLevel+formal+hoursWorkUsual+oficio, db)$residuals
+sex_resid_c = lm(sex~age+maxEducLevel+formal+hoursWorkUsual+oficio, dbgender)$residuals
 
 # Paso 2: Residuos de 'log_w' en 'controles' 
-wage_resid_c = lm(log_w~age+maxEducLevel+formal+hoursWorkUsual+oficio, db)$residuals
+wage_resid_c = lm(log_w~age+maxEducLevel+formal+hoursWorkUsual+oficio, dbgender)$residuals
 
 # Paso 3: Regresion de residuos
-reg_fwl <- lm(wage_resid_c~sex_resid_c, db)
+reg_fwl <- lm(wage_resid_c~sex_resid_c, dbgender)
 stargazer(reg3, reg_fwl, type = "text", digits = 5)
-length(db$age)
+
 
 # FWL - Bootstrap_______________________________________________________________
-
 # Datos auxiliares
 resid <- cbind.data.frame(sex_resid_c, wage_resid_c)
-
 
 # Funcion de coeficiente
 fwl_coef.fn <- function(datos, index){
@@ -184,17 +186,16 @@ fwl_coef.fn <- function(datos, index){
 b_age_wage_sex <- boot(resid, fwl_coef.fn, R = 1000)
 print(b_age_wage_sex)
 
-#Filtros por genero
-
 # Prediccion
 
-forecast_wr <- predict(reg_fwl, data =wage_resid_c)
+forecast_wr <- predict(reg_fwl,data =dbgender$log_w)
 
 #Grafica age-earnings 
 
-ggplot(data=db, mapping=aes(x=age, y=forecast_wr))+geom_point(col='#6E8B3D')+xlab("Edad")+ylab("Salario")+ggtitle("Perfil Estimado Edad vs Salario")+theme_bw()
+ggplot(data=dbgender, mapping=aes(x=age, y=forecast_wr ))+geom_point(col='#6E8B3D')+xlab("Edad")+ylab("Salario")+ggtitle("Perfil Estimado Edad vs Salario")+theme_bw()
 
 #ggplot(data=db, mapping=aes(x=age, y=sex_resid_c))+geom_point(col='lightskyblue2')+xlab("Edad")+ylab("Logaritmo Salario")+ggtitle("Perfil Estimado Edad vs Salario")+theme_bw()
+
 
 #Intervalo de confianza 
 
