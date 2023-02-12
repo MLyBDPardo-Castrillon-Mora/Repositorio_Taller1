@@ -10,6 +10,7 @@ library(datawizard)
 library(AICcmodavg)
 library(olsrr)
 library(stargazer)
+library(ggplot2)
 p_load(rvest, tidyverse)
 
 
@@ -56,6 +57,9 @@ db <- db[db$ocu==1,]
 db <- db[db$y_ingLab_m>0,]
 db <- db[!is.na(db$age),]
 
+#Elimiinimaos Missing
+db <- db[!is.na(db$maxEducLevel),]
+
 # Generar log de los ingresos
 db$log_w = log(db$y_ingLab_m)
 
@@ -66,21 +70,31 @@ reg1 <- lm(log_w~age+I(age^2), data = db)
 stargazer(reg1, type = "text", digits = 5)
 
 # Bootstrap
-
-# Funcion de maximizacion
-age_max.fn <- function(datos, index){
-  X <- datos$age[index]
-  Y <- datos$log_w[index]
-  reg_aux <- lm(Y~X+I(X^2), data = datos)
-  -reg_aux$coefficients[2]/(2*reg_aux$coefficients[3])
-}
-
-
-# Bootstrap para edad que maximiza ingresos
-b_age_wage <-boot(db, age_max.fn, R = 1000)
-
-
+  
+  # Funcion de maximizacion
+  age_max.fn <- function(datos, index){
+    X <- datos$age[index]
+    Y <- datos$log_w[index]
+    reg_aux <- lm(Y~X+I(X^2), data = datos)
+    -reg_aux$coefficients[2]/(2*reg_aux$coefficients[3])
+  }
+  
+  
+  # Bootstrap para edad que maximiza ingresos
+  b_age_wage <-boot(db, age_max.fn, R = 1000)
+  
+  # Prediccion
+  forecast_w <- predict(reg1, data = db$log_w)
+  
+  
+  #Bootstrap intervalos de confianza 
+  intervaloMax <- b_age_wage$t0+(0.4383546*1.96)
+  intervaloMin <- b_age_wage$t0-(0.4383546*1.96)
+  print(paste ("Min:", intervaloMin,", Max:", intervaloMax))
+  
 # GENDER GAP====================================================================
+#Hacemos un summary para revisar los controles que se integraran a la regresio
+summary(db[,c('sex','age','maxEducLevel','formal','hoursWorkUsual','oficio')])  
 
 # Regresión incondicional
 reg2 <- lm(log_w~sex, data = db)
@@ -92,12 +106,22 @@ stargazer(reg2, type = "text", digits = 5)
   stargazer(reg3, type = "text", digits = 5)
 
   # Paso 1: Residuos de 'sex' en 'controles'
-  sex_resid_c = lm(sex~age+maxEducLevel+formal+hoursWorkUsual+oficio, db)$residuals
+  db$sex_resid_c = lm(sex~age+maxEducLevel+formal+hoursWorkUsual+oficio, db)$residuals
 
   # Paso 2: Residuos de 'log_w' en 'controles' 
-  wage_resid_c = lm(log_w~age+maxEducLevel+formal+hoursWorkUsual+oficio, db)$residuals
+  db$wage_resid_c = lm(log_w~age+maxEducLevel+formal+hoursWorkUsual+oficio, db)$residuals
+  
+  # Paso 4: Limpiar Variables restando media con errores
+  db <- db %>% mutate(sexmean=mean(db$sex), log_wage_mean = mean(db$log_w))
+  
+  db <- db %>% mutate(sexast=db$sexmean + db$sex_resid_c, db)
+  db <- db %>% mutate(log_wage_ast=db$log_wage_mean + db$wage_resid_c, db)
+  
+  # Paso 5: Correr regresion
+  reg_fwl_final <- lm(log_wage_ast~sexast,data=db)
+  stargazer(reg3,reg_fwl_final) #Esta sería la tabla?
 
-  # Paso 3: Regresion de residuos
+  # Paso 5*: Regresion de residuos
   reg_fwl <- lm(wage_resid_c~sex_resid_c, db)
   stargazer(reg3, reg_fwl, type = "text", digits = 5)
 
@@ -114,9 +138,18 @@ fwl_coef.fn <- function(datos, index){
   reg_aux$coefficients[2]
 }
 
+#Predicción
+forecast_wr <- predict(reg_fwl,data =db$log_w)
+
 # Bootstrap para GAP condicionado
 boot(resid, fwl_coef.fn, R = 1000)
-  
+
+#Intervalo de confianza 
+
+intervaloMax <- b_age_wage_sex$t0+(0.01245347*1.96)
+intervaloMin <- b_age_wage_sex$t0-(0.01245347*1.96)
+print(paste ("Min:", intervaloMin,", Max:", intervaloMax))
+ 
 # PREDICTING EARNINGS===========================================================
 
 # Crear variable de interaccion 'age' and 'sex'.
@@ -131,9 +164,6 @@ model_2 <- lm(log_w~age+I(age^2)+sex, data = part_db$p_0.7)
 model_3 <- lm(log_w~age+sex+interac_age_sex, data = part_db$p_0.7)
 model_4 <- lm(log_w~age+I(age^2)+sex+interac_age_sex, data = part_db$p_0.7)
 model_5 <- lm(log_w~age+I(age^2)+I(age^3)+sex+interac_age_sex, data = part_db$p_0.7)
-
-# lista de modelos 
-models <- list(model_1, model_2, model_3, model_4, model_5)
 model_6 <- lm(log_w~age+I(age^2), data = part_db$p_0.7)
 model_7 <- lm(log_w~sex, data = part_db$p_0.7)
 model_8 <- lm(log_w~age+maxEducLevel+formal+hoursWorkUsual+oficio, data = part_db$p_0.7)
@@ -198,6 +228,18 @@ CV_5 <- 1/16277*sum(CV5_aux)
 CV_5 <- 1/9892*sum(CV5_aux)
 
 # FILES TO VIEWS FOLDER===========================================================
+
+#Gráfico Age-Wage Profile
+ggplot(data=db, mapping=aes(x=age, y=forecast_wr ))+geom_point(col='#6E8B3D')
+                            +xlab("Edad")+ylab("Salario")+ggtitle("Perfil Estimado Edad vs Salario")+
+                              theme_bw()
+
+
+#Grafico Age-Wage Profile
+ggplot(data=db, mapping=aes(x=age, y=forecast_w))+geom_point(col='#6E8B3D')
+                            +xlab("Edad")+ylab("Salario")+
+                            ggtitle("Perfil Estimado Edad vs Salario")+
+  theme_bw()
 
 #Estadisticas descriptivas
 stargazer(db[c("age","sex","formal","hoursWorkUsual","y_ingLab_m")], digits=1,
