@@ -151,23 +151,20 @@ stargazer(reg2, type = "text", digits = 5)
 
 # FWL___________________________________________________________________________
 # Paso 0: Regresion original
-
+summary(db)
 reg3 <- lm(log_w~sex+age+maxEducLevel+formal+hoursWorkUsual+oficio, data = db)
-reg3$residuals
-
 stargazer(reg3, type = "text", digits = 5)
 
 # Paso 1: Residuos de 'sex' en 'controles'
 sex_resid_c = lm(sex~age+maxEducLevel+formal+hoursWorkUsual+oficio, db)$residuals
-sex_resid_c = lm(sex~age, db)
 
 # Paso 2: Residuos de 'log_w' en 'controles' 
 wage_resid_c = lm(log_w~age+maxEducLevel+formal+hoursWorkUsual+oficio, db)$residuals
-#length(wage_resid_c)
 
 # Paso 3: Regresion de residuos
 reg_fwl <- lm(wage_resid_c~sex_resid_c, db)
 stargazer(reg3, reg_fwl, type = "text", digits = 5)
+length(db$age)
 
 # FWL - Bootstrap_______________________________________________________________
 
@@ -184,10 +181,14 @@ fwl_coef.fn <- function(datos, index){
 }
 
 # Bootstrap para GAP condicionado
-boot(resid, fwl_coef.fn, R = 1000)
+b_age_wage_sex <- boot(resid, fwl_coef.fn, R = 1000)
+print(b_age_wage_sex)
+
+#Filtros por genero
 
 # Prediccion
-forecast_wr <- predict(reg_fwl, data = wage_resid_c)
+
+forecast_wr <- predict(reg_fwl, data =wage_resid_c)
 
 #Grafica age-earnings 
 
@@ -195,7 +196,11 @@ ggplot(data=db, mapping=aes(x=age, y=forecast_wr))+geom_point(col='#6E8B3D')+xla
 
 #ggplot(data=db, mapping=aes(x=age, y=sex_resid_c))+geom_point(col='lightskyblue2')+xlab("Edad")+ylab("Logaritmo Salario")+ggtitle("Perfil Estimado Edad vs Salario")+theme_bw()
 
+#Intervalo de confianza 
 
+intervaloMax <- b_age_wage_sex$t0+(0.01245347*1.96)
+intervaloMin <- b_age_wage_sex$t0-(0.01245347*1.96)
+print(paste ("Min:", intervaloMin,", Max:", intervaloMax))
 
 # PREDICTING EARNINGS===========================================================
 
