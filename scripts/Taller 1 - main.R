@@ -45,7 +45,7 @@ for (i in 2:10){
 set.seed(10101)
 
 #Conservamos las variables relevantes
-db %>% select(age,ocu,y_ingLab_m,sex,maxEducLevel,formal,hoursWorkUsual,oficio)
+db <-db %>% select(age,ocu,y_ingLab_m,sex,maxEducLevel,formal,hoursWorkUsual,oficio)
 
 # Eliminar observaciones de menores de edad
 db <- db[db$age>=18,]
@@ -86,7 +86,6 @@ b_age_wage <-boot(db, age_max.fn, R = 1000)
 # Prediccion
 forecast_w <- predict(reg1, data = db$log_w)
 
-
 #Bootstrap intervalos de confianza 
 intervaloMax <- b_age_wage$t0+(0.4383546*1.96)
 intervaloMin <- b_age_wage$t0-(0.4383546*1.96)
@@ -106,22 +105,12 @@ reg3 <- lm(log_w~sex+age+maxEducLevel+formal+hoursWorkUsual+oficio, data = db)
 stargazer(reg3, type = "text", digits = 5)
 
 # Paso 1: Residuos de 'sex' en 'controles'
-db$sex_resid_c = lm(sex~age+maxEducLevel+formal+hoursWorkUsual+oficio, db)$residuals
+sex_resid_c = lm(sex~age+maxEducLevel+formal+hoursWorkUsual+oficio, db)$residuals
 
 # Paso 2: Residuos de 'log_w' en 'controles' 
-db$wage_resid_c = lm(log_w~age+maxEducLevel+formal+hoursWorkUsual+oficio, db)$residuals
+wage_resid_c = lm(log_w~age+maxEducLevel+formal+hoursWorkUsual+oficio, db)$residuals
 
-# Paso 4: Limpiar Variables restando media con errores
-db <- db %>% mutate(sexmean=mean(db$sex), log_wage_mean = mean(db$log_w))
-
-db <- db %>% mutate(sexast=db$sexmean + db$sex_resid_c, db)
-db <- db %>% mutate(log_wage_ast=db$log_wage_mean + db$wage_resid_c, db)
-
-# Paso 5: Correr regresion
-reg_fwl_final <- lm(log_wage_ast~sexast,data=db)
-stargazer(reg3,reg_fwl_final) #Esta sería la tabla?
-
-# Paso 5*: Regresion de residuos
+# Paso 3*: Regresion de residuos
 reg_fwl <- lm(wage_resid_c~sex_resid_c, db)
 stargazer(reg3, reg_fwl, type = "text", digits = 5)
 
@@ -255,5 +244,11 @@ stargazer(reg1, type = "latex", digits = 3, title = "Perfil Edad-Salario",
           dep.var.caption = "Variable respuesta",
           keep.stat = (c("n","rsq","f")), out="./views/reg1.tex")
 
-#Regresión Gender Gap
-stargazer(reg2,)
+#Regresión FWL
+stargazer(reg3,reg_fwl, reg_fwl, type = "latex", digits = 5,
+          omit=c("age","maxEducLevel","formal","hoursWorkUsual","oficio","Constant"),
+          covariate.labels=(c("Sexo", "Residuales del Sexo")),
+          dep.var.labels = c("XX","Residuales Salario","XXX"),
+          notes.label ="Nota: Se incluyeron los siguientes controles: Tipo de oficio, Horas trabajadas a la semana,Nivel máximo de educación, si es formal o no",
+          keep.stat = (c("n","rsq","f")), out="./views/reg_fwl.tex")
+
