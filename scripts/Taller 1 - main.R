@@ -105,7 +105,22 @@ stargazer(reg2, type = "text", digits = 5)
   reg_fwl <- lm(wage_resid_c~sex_resid_c, db)
   stargazer(reg3, reg_fwl, type = "text", digits = 5)
 
+<<<<<<< Updated upstream
 # FWL - Bootstrap_______________________________________________________________
+=======
+db <- db %>% mutate(sexast=db$sexmean + db$sex_resid_c, db)
+db <- db %>% mutate(log_wage_ast=db$log_wage_mean + db$wage_resid_c, db)
+
+# Paso 5: Correr regresion
+reg_fwl_final <- lm(log_wage_ast~sexast,data=db)
+stargazer(reg3,reg_fwl_final, type="text") #Esta sería la tabla?
+
+# Paso 5*: Regresion de residuos
+reg_fwl <- lm(wage_resid_c~sex_resid_c, db)
+stargazer(reg3, reg_fwl, type = "text", digits = 5)
+
+# FWL - Bootstrap_______________________
+>>>>>>> Stashed changes
 
 # Datos auxiliares
 resid <- cbind.data.frame(sex_resid_c, wage_resid_c)
@@ -199,6 +214,19 @@ for (i in 1:9892) {
   CV5_aux[i] <- (db$log_w[i] - F_5)
 }
 CV5_aux <- CV5_aux^2
+<<<<<<< Updated upstream
 CV_5 <- 1/9892*sum(CV5_aux)
+=======
+CV_5 <- 1/9891*sum(na.omit(CV5_aux))
+
+# Distribucion de los errores de prediccion
+
+res_8 <- forecast_8-part_db$test$log_w
+hist(res_8, 
+     main="Histograma: Distribución de errores de predicción", 
+     xlab="Error de predicción", 
+     ylab="Frecuencia"
+     )
+>>>>>>> Stashed changes
 
 
