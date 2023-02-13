@@ -139,6 +139,27 @@ intervaloMax <- b_age_wage_sex$t0+(0.01245347*1.96)
 intervaloMin <- b_age_wage_sex$t0-(0.01245347*1.96)
 print(paste ("Min:", intervaloMin,", Max:", intervaloMax))
 
+# Este bloque es para la grafica estimacion de salarios por genero    
+reg3 <- lm(log_w~sex+age+I(age^2), data = db)
+summary(reg3)
+predict(reg3,newdata = db)
+stargazer(reg3, type = "text", digits = 5)
+# crear dataframe para categorizar por sexo hombre=1 y mujer =0
+
+x_hombres<-data.frame(sex=1,age=1:100)
+reg3_hombres<-predict(reg3,newdata = x_hombres)
+base_predict_hombres<-data.frame(salario_predicho=reg3_hombres,x_hombres)
+x_mujeres=data.frame(sex=0,age=1:100)
+reg3_mujeres=predict(reg3,newdata = x_mujeres)
+base_predict_muejeres<-data.frame(salario_predicho=reg3_mujeres,x_mujeres)
+base_predicted <- rbind(base_predict_hombres,base_predict_muejeres)
+
+ggplot(data=base_predicted, mapping=aes(x=age, y=base_predicted$salario_predicho,color=as.factor(sex) ))+geom_point(col='#6E8B3D') +
+  xlab("Edad")+ylab("Salario")+ggtitle("Perfil Estimado Edad vs Salario")+
+  geom_smooth(level=0.95,se=FALSE)+
+  theme_bw()
+
+
 # PREDICTING EARNINGS===========================================================
 
 # Crear variable de interaccion 'age' and 'sex'.
