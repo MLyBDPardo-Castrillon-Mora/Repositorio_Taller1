@@ -252,6 +252,7 @@ stargazer(reg3,reg_fwl, reg_fwl, type = "latex", digits = 5,
           notes.label ="Nota: Se incluyeron los siguientes controles: Tipo de oficio, Horas trabajadas a la semana,Nivel máximo de educación, si es formal o no",
           keep.stat = (c("n","rsq","f")), out="./views/reg_fwl.tex")
 
+#Histograma
 res_8 <- forecast_8-part_db$test$log_w
 hist(res_8, 
      main="Histograma: Distribución de errores de predicción", 
